@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administração — Júlia &amp; Danilo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Work+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #FFFFFF;
+    --card: #E9F5EF;
+    --card-line: #E3D08B;
+    --emerald: #0B6E4F;
+    --emerald-deep: #054A34;
+    --emerald-darkest: #032A1E;
+    --gold: #C6A135;
+    --gold-soft: #EADFB4;
+    --ink: #17241D;
+    --ink-soft: #5E6E64;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(rgba(255,255,255,0.09) 1.2px, transparent 1.8px) 0 0/24px 24px,
+      radial-gradient(circle at 50% 12%, #22936B 0%, #1C7A57 55%, #0F5940 100%);
+    color: var(--ink);
+    font-family:'Work Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{
+    max-width: 920px; margin: 0 auto; min-height: 100vh; position: relative;
+    border-left: 4px solid var(--gold); border-right: 4px solid var(--gold);
+    box-shadow: inset 4px 0 0 rgba(198,161,53,0.25), inset -4px 0 0 rgba(198,161,53,0.25);
+  }
+  .hidden{ display:none !important; }
+
+  @media (prefers-reduced-motion: reduce){
+    .dot, .petal, .login-names, .rings-icon, .login-btn, .cbox{ animation: none !important; }
+    #login-screen, #main-site, #admin-panel{ transition: none !important; }
+  }
+
+  /* ---------- SCREEN TRANSITIONS ---------- */
+  #login-screen, #main-site, #admin-panel{
+    transition: opacity .38s ease, transform .38s ease;
+  }
+  .fade-out{ opacity:0 !important; transform: translateY(-10px); }
+  .fade-in-start{ opacity:0 !important; transform: translateY(10px); }
+
+  /* ---------- FLOATING PETALS ---------- */
+  .petals{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+  .petal{ position:absolute; top:-6%; opacity:0; animation: fall linear infinite; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.08)); }
+  @keyframes fall{
+    0%{ transform: translateY(0) translateX(0) rotate(0deg); opacity:0; }
+    8%{ opacity:.9; }
+    92%{ opacity:.6; }
+    100%{ transform: translateY(112vh) translateX(var(--drift,24px)) rotate(300deg); opacity:0; }
+  }
+
+  /* ---------- ENTRANCE ANIMATIONS ---------- */
+  @keyframes fadeInUp{ from{ opacity:0; transform: translateY(18px);} to{ opacity:1; transform:translateY(0);} }
+  @keyframes shimmer{ 0%{ background-position: 0% center; } 100%{ background-position: 200% center; } }
+  @keyframes glow{ 0%,100%{ box-shadow: 0 0 0 rgba(198,161,53,0);} 50%{ box-shadow: 0 0 22px rgba(198,161,53,0.55);} }
+  @keyframes ringPulse{ 0%,100%{ transform: scale(1); opacity:.85; } 50%{ transform: scale(1.08); opacity:1; } }
+
+  /* ---------- LOGIN SCREEN ---------- */
+  #login-screen{
+    min-height: 100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: 3rem 1.75rem;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(rgba(255,255,255,0.09) 1.2px, transparent 1.8px) 0 0/24px 24px,
+      radial-gradient(circle at 50% 12%, #22936B 0%, #1C7A57 55%, #0F5940 100%);
+  }
+  .login-inner{ position: relative; z-index: 1; display:flex; flex-direction:column; align-items:center; max-width: 400px; width:100%; }
+  .login-frame{ position:absolute; inset: 18px; border: 1.5px solid rgba(255,255,255,0.45); border-radius: 6px; pointer-events:none; z-index:1; }
+  .login-frame::after{ content:''; position:absolute; inset: 6px; border: 1.5px solid var(--gold); border-radius: 3px; opacity: 0.9; }
+  .corner{ position:absolute; z-index:1; opacity: 1; }
+  .corner-tl{ top: 26px; left: 26px; }
+  .corner-tr{ top: 26px; right: 26px; transform: scaleX(-1); }
+  .corner-bl{ bottom: 26px; left: 26px; transform: scaleY(-1); }
+  .corner-br{ bottom: 26px; right: 26px; transform: scale(-1,-1); }
+  .rings-icon{ margin-bottom: 1.5rem; animation: ringPulse 3.2s ease-in-out infinite, fadeInUp .8s ease both; }
+  .login-eyebrow{
+    font-family:'Space Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.36em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 1.25rem;
+    animation: fadeInUp .8s ease .1s both;
+  }
+  .login-names{
+    font-family:'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(2.4rem, 10.5vw, 4.2rem);
+    line-height: 1.15;
+    margin: 0 0 0.7rem;
+    white-space: nowrap;
+    animation: fadeInUp .9s ease .25s both, shimmer 7s linear infinite 1.2s;
+  }
+  .login-date{
+    font-family:'Space Mono', monospace;
+    color: var(--gold);
+    font-size: clamp(1.35rem, 4.5vw, 1.7rem);
+    letter-spacing: 0.16em;
+    margin: 0 0 1.1rem;
+    animation: fadeInUp .8s ease .4s both;
+  }
+  .login-tagline{
+    font-family:'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(1.05rem, 3.8vw, 1.25rem);
+    color: rgba(255,255,255,0.88);
+    line-height: 1.6;
+    max-width: 320px;
+    margin: 0 0 1.75rem;
+    animation: fadeInUp .8s ease .45s both;
+  }
+  .flourish{ width: 240px; height: 24px; margin-bottom: 2.5rem; animation: fadeInUp .8s ease .5s both; }
+  .login-btn-row{ display:flex; gap: 12px; width: 100%; max-width: 400px; margin-bottom: 14px; }
+  .login-btn{
+    flex: 1;
+    padding: 18px 16px;
+    border-radius: 12px;
+    font-family:'Work Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--gold);
+    background: var(--gold);
+    color: var(--emerald-deep);
+    transition: transform .2s ease;
+    animation: fadeInUp .8s ease .65s both, glow 2.6s ease-in-out infinite 1.5s;
+  }
+  .login-btn:hover{ transform: translateY(-2px) scale(1.015); }
+  .login-btn.ghost{
+    background: transparent;
+    color: #FFFFFF;
+    border: 1.5px solid rgba(255,255,255,0.55);
+    animation: fadeInUp .8s ease .8s both;
+    box-shadow: none;
+  }
+  #admin-login-box{ max-width: 340px; width: 100%; margin-top: 6px; animation: fadeInUp .6s ease both; }
+  #admin-login-box input{
+    width:100%; padding: 13px; border-radius: 9px; border: 1px solid var(--gold-soft);
+    background: rgba(255,255,255,0.92); color: var(--ink); font-size: 14px; margin-bottom: 10px;
+  }
+  .login-error{ color: #FFC1A8; font-size: 13px; margin: -4px 0 10px; display:none; }
+
+  /* ---------- HERO (main site) ---------- */
+  .hero-band{
+    background: linear-gradient(160deg, #22936B 0%, #1C7A57 100%);
+    border-radius: 0 0 26px 26px;
+    padding: 2.25rem 1.5rem 1rem;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .main-topbar{ padding: 10px 1.5rem 0; position:relative; z-index:2; }
+  .topbar-back{
+    background:none; border:none; color: var(--emerald-deep); font-size: 13px;
+    font-family:'Work Sans', sans-serif; cursor:pointer; padding: 6px 0; font-weight: 500;
+  }
+  .topbar-back:hover{ text-decoration: underline; }
+  .hero-corner{ position:absolute; z-index:2; opacity:0.95; }
+  .hero-corner-tl{ top:14px; left:14px; }
+  .hero-corner-tr{ top:14px; right:14px; transform: scaleX(-1); }
+  .section-divider{ display:block; width:180px; height:18px; margin: 1.75rem auto 0; }
+  .hero{ text-align:center; position:relative; z-index:1; }
+  .eyebrow{ font-family:'Space Mono', monospace; font-size: 12px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); margin: 0 0 1rem; }
+  .shimmer-gold{
+    background: linear-gradient(90deg, #FFFFFF, var(--gold) 45%, #FFFFFF 90%);
+    background-size: 220% auto;
+    color: #FFFFFF;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 7s linear infinite;
+  }
+  .names-row{ display:flex; align-items:baseline; justify-content:center; flex-wrap:wrap; gap: 0.3em 0.55em; }
+  .names{
+    font-family:'Cormorant Garamond', serif; font-style: italic; font-weight: 500;
+    font-size: clamp(1.7rem, 6.5vw, 2.9rem); line-height: 1.15; margin: 0;
+  }
+  .amp{ font-family:'Cormorant Garamond', serif; font-style: italic; color: var(--gold); font-size: clamp(1.3rem, 5vw, 2rem); }
+  .date-big{ font-family:'Space Mono', monospace; font-size: clamp(1.35rem, 5vw, 1.8rem); letter-spacing: 0.12em; color: var(--gold); margin: 1.4rem 0 0.5rem; }
+  .garland{ width:100%; display:block; position:relative; z-index:1; margin-top: 1.25rem; }
+
+  .countdown{ display:flex; justify-content:center; gap: 12px; padding: 1.75rem 1.5rem 0; position:relative; z-index:1; }
+  .cbox{
+    background: var(--card); border: 1px solid var(--card-line); border-top: 2px solid var(--gold);
+    border-radius: 10px; padding: 0.85rem 0.6rem; min-width: 66px; text-align:center;
+    transition: transform .3s ease;
+  }
+  .cbox .n{ font-family:'Space Mono', monospace; font-size: 1.5rem; font-weight: 700; color: var(--emerald-deep); display:block; }
+  .cbox .l{ font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); display:block; margin-top:4px; }
+
+  /* ---------- TABS ---------- */
+  .tabbar{
+    display:flex; margin: 2.25rem 1.5rem 0; border-bottom: 1.5px solid var(--gold);
+    background: var(--card); border-radius: 12px 12px 0 0; padding: 4px 4px 0;
+    position:relative; z-index:1;
+  }
+  .tabbtn{
+    flex:1; text-align:center; padding: 13px 4px; font-size: 13px; font-weight: 500;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    border-bottom: 2px solid transparent; font-family:'Work Sans', sans-serif; transition: color .2s ease;
+  }
+  .tabbtn.active{ color: var(--emerald-deep); border-bottom: 2px solid var(--gold); }
+  .tabpanel{ padding: 1.75rem 1.5rem 3rem; position:relative; z-index:1; }
+
+  /* ---------- SHARED CARD / FORM ---------- */
+  .section{
+    background: var(--card); border: 1.5px solid var(--card-line); border-top: 3px solid var(--gold);
+    border-radius: 16px; padding: 1.6rem 1.5rem; margin-bottom: 1.6rem; position: relative;
+    box-shadow: inset 0 0 0 3px rgba(198,161,53,0.1);
+  }
+  .section::before{
+    content:'';
+    position:absolute; top:-7px; left:50%;
+    width:12px; height:12px;
+    background: var(--gold);
+    border: 2px solid #fff;
+    transform: translateX(-50%) rotate(45deg);
+    box-shadow: 0 1px 2px rgba(5,74,52,0.25);
+  }
+  .section:not(:last-child)::after{
+    content:'';
+    position:absolute; bottom:-13px; left:50%;
+    width:7px; height:7px;
+    background: var(--gold);
+    opacity: 0.75;
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .section h2{ font-family:'Cormorant Garamond', serif; font-style: italic; font-weight: 600; font-size: 1.5rem; margin: 0 0 0.8rem; color: var(--emerald-deep); }
+  .section h2::before{ content:'◆'; color: var(--gold); font-size: 0.55em; margin-right: 8px; vertical-align: middle; }
+  .story-text p{ font-size: 14.5px; line-height: 1.75; color: var(--ink); margin: 0 0 1rem; }
+  .story-text p:last-child{ margin-bottom: 0; }
+  .venue-name{ font-weight: 500; font-size: 15px; margin: 0 0 4px; color: var(--ink); }
+  .venue-addr{ font-size: 13.5px; color: var(--ink-soft); margin: 0; line-height: 1.55; }
+  .btn-row{ display:flex; gap: 10px; margin-top: 1.1rem; flex-wrap: wrap; }
+  .btn{
+    font-family:'Work Sans', sans-serif; font-size: 13px; font-weight: 500; color: #fff;
+    background: var(--emerald); border: none; border-radius: 8px; padding: 10px 16px;
+    cursor: pointer; text-decoration: none; display:inline-flex; align-items:center; transition: transform .2s ease;
+  }
+  .btn:hover{ transform: translateY(-1px); }
+  .btn.secondary{ background: transparent; color: var(--emerald-deep); border: 1px solid var(--card-line); }
+  .btn.gold{ background: var(--gold); color: var(--emerald-deep); }
+
+  label{ display:block; font-size: 12px; letter-spacing: 0.03em; color: var(--ink-soft); margin: 1rem 0 0.35rem; }
+  label:first-of-type{ margin-top: 0; }
+  input[type="text"], input[type="number"], textarea{
+    width:100%; background: #fff; border: 1px solid var(--card-line); border-radius: 8px;
+    color: var(--ink); font-family:'Work Sans', sans-serif; font-size: 14px; padding: 10px 12px;
+  }
+  textarea{ resize: vertical; min-height: 64px; }
+  .radio-row{ display:flex; gap: 10px; margin-top: 0.35rem; }
+  .radio-opt{ flex:1; border: 1px solid var(--card-line); border-radius: 8px; padding: 10px; text-align:center; font-size: 13px; cursor:pointer; color: var(--ink-soft); transition: all .2s ease; }
+  .radio-opt.active{ border-color: var(--gold); color: var(--emerald-deep); background: var(--gold-soft); }
+  .submit-btn{ width:100%; margin-top: 1.4rem; padding: 12px; font-size: 14px; justify-content:center; }
+  .confirm-msg{ display:none; text-align:center; padding: 1rem; color: var(--emerald-deep); font-size: 14px; margin-top: 1rem; }
+  .status{ font-size: 12px; color: var(--ink-soft); margin-top: 0.6rem; }
+
+  /* ---------- CONTRIBUIÇÃO / PIX ---------- */
+  .pix-heart{ display:block; margin: 0 auto 0.9rem; animation: ringPulse 3s ease-in-out infinite; }
+  .pix-message{ font-size: 14.5px; line-height: 1.75; color: var(--ink); text-align:center; margin: 0 0 1.4rem; }
+  .pix-key-box{
+    display:flex; align-items:center; justify-content:space-between; gap: 10px;
+    background: #fff; border: 1px dashed var(--gold); border-radius: 10px; padding: 14px 16px; margin-top: 0.5rem;
+  }
+  .pix-key-box span{ font-family:'Space Mono', monospace; font-size: 13.5px; color: var(--emerald-deep); word-break: break-all; }
+  .pix-copy-status{ font-size: 12px; color: var(--emerald); margin-top: 8px; text-align:center; display:none; }
+
+  /* ---------- FOTOS DOS CONVIDADOS ---------- */
+  input[type="file"]{
+    width:100%; background: #fff; border: 1px solid var(--card-line); border-radius: 8px;
+    color: var(--ink); font-family:'Work Sans', sans-serif; font-size: 13px; padding: 9px 10px;
+  }
+  .photo-gallery{ display:grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 1rem; }
+  .photo-item img{
+    width:100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--card-line); display:block;
+  }
+  .photo-caption{ font-size: 11px; color: var(--ink-soft); margin-top: 4px; text-align:center; line-height:1.3; }
+  .photo-item{ position:relative; }
+  .photo-item .photo-delete{
+    position:absolute; top:4px; right:4px; background: rgba(179,73,47,0.85); color:#fff; border:none;
+    border-radius: 6px; font-size: 10px; padding: 3px 6px; cursor:pointer;
+  }
+  .photo-thumb-btn{ border:none; padding:0; margin:0; background:none; cursor:pointer; display:block; width:100%; }
+  .lightbox-backdrop{
+    display:none; position: fixed; inset: 0; background: rgba(5,20,15,0.9);
+    z-index: 100; align-items: center; justify-content: center; padding: 24px;
+  }
+  .lightbox-backdrop.active{ display:flex; }
+  .lightbox-backdrop img{
+    max-width: 92vw; max-height: 86vh; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+  }
+  .lightbox-caption{ color:#fff; font-size:13px; text-align:center; margin-top:12px; max-width:90vw; }
+  .lightbox-close{
+    position:absolute; top:18px; right:22px; color:#fff; font-size:28px; background:none; border:none; cursor:pointer;
+    line-height:1;
+  }
+  #admin-panel{
+    padding: 1.5rem;
+    min-height: 100vh;
+    max-width: 920px;
+    margin: 0 auto;
+    position: relative;
+    border-left: 5px solid var(--gold);
+    border-right: 5px solid var(--gold);
+    box-shadow: inset 5px 0 0 rgba(198,161,53,0.3), inset -5px 0 0 rgba(198,161,53,0.3);
+  }
+  .admin-header h2{ color: #FFFFFF !important; }
+  .admin-header .btn.secondary{ color:#FFFFFF; border-color: rgba(255,255,255,0.55); }
+  #admin-panel .status{ color: rgba(255,255,255,0.8); }
+  .admin-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; }
+  .admin-header h2{ font-family:'Cormorant Garamond', serif; font-style: italic; font-weight: 600; color: var(--emerald-deep); margin:0; font-size: 1.6rem; }
+  .admin-header h2::before{ content:'◆'; color: var(--gold); font-size: 0.5em; margin-right: 8px; vertical-align: middle; }
+  .admin-stats{ display:flex; gap: 10px; margin-bottom: 1.25rem; }
+  .stat{ flex:1; background: var(--card); border:1.5px solid var(--card-line); border-top: 3px solid var(--gold); border-radius: 10px; padding: 12px; text-align:center; }
+  .stat .n{ font-family:'Space Mono', monospace; font-size: 1.3rem; color: var(--emerald-deep); display:block; }
+  .stat .l{ font-size: 10px; text-transform:uppercase; letter-spacing:0.1em; color: var(--ink-soft); }
+  table{ width:100%; border-collapse: collapse; font-size: 13px; }
+  th, td{ text-align:left; padding: 8px 6px; border-bottom: 1px solid var(--card-line); }
+  th{ color: var(--ink-soft); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td{ color: var(--ink); }
+  .guest-attend-sim{ color: var(--emerald); font-weight: 500; }
+  .guest-attend-nao{ color: var(--ink-soft); }
+  .row-actions{ display:flex; gap: 6px; white-space: nowrap; }
+  .row-actions button{
+    font-family:'Work Sans', sans-serif; font-size: 11px; border-radius: 6px; border: 1px solid var(--card-line);
+    background: #fff; color: var(--ink-soft); padding: 5px 8px; cursor: pointer;
+  }
+  .row-actions button.row-edit{ color: var(--emerald); border-color: var(--emerald); }
+  .row-actions button.row-delete{ color: #B3492F; border-color: #E0BBAE; }
+
+  .footer-note{
+    text-align:center; font-size: 11px; color: var(--ink-soft); letter-spacing: 0.08em; text-transform: uppercase;
+    margin: 0 1.5rem 2rem; position:relative; z-index:1;
+  }
+  .footer-note span{
+    background: var(--card); border: 1px solid var(--card-line); border-radius: 20px;
+    padding: 8px 18px; display:inline-block;
+  }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="petals" id="petals-admin-login"></div>
+  <div class="login-frame"></div>
+  <svg class="corner corner-tl" width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M2 22 Q2 2 22 2" stroke="var(--gold)" stroke-width="1.6" fill="none"/>
+    <circle cx="22" cy="2" r="2.4" fill="var(--gold)"/>
+  </svg>
+  <svg class="corner corner-tr" width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M2 22 Q2 2 22 2" stroke="var(--gold)" stroke-width="1.6" fill="none"/>
+    <circle cx="22" cy="2" r="2.4" fill="var(--gold)"/>
+  </svg>
+  <svg class="corner corner-bl" width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M2 22 Q2 2 22 2" stroke="var(--gold)" stroke-width="1.6" fill="none"/>
+    <circle cx="22" cy="2" r="2.4" fill="var(--gold)"/>
+  </svg>
+  <svg class="corner corner-br" width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M2 22 Q2 2 22 2" stroke="var(--gold)" stroke-width="1.6" fill="none"/>
+    <circle cx="22" cy="2" r="2.4" fill="var(--gold)"/>
+  </svg>
+  <div class="login-inner">
+    <svg class="rings-icon" width="64" height="44" viewBox="0 0 52 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="20" cy="18" r="13" fill="none" stroke="var(--gold)" stroke-width="2.2"/>
+      <circle cx="32" cy="18" r="13" fill="none" stroke="#FFFFFF" stroke-width="2.2"/>
+    </svg>
+    <p class="login-eyebrow">Área restrita</p>
+    <p class="login-names shimmer-gold">Administração</p>
+    <p class="login-tagline">Acesso exclusivo para a organização do casamento de Júlia &amp; Danilo.</p>
+    <svg class="flourish" viewBox="0 0 200 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="0" y1="10" x2="82" y2="10" stroke="var(--gold)" stroke-width="1.4"/>
+      <rect x="95" y="5" width="10" height="10" transform="rotate(45 100 10)" fill="var(--gold)"/>
+      <line x1="118" y1="10" x2="200" y2="10" stroke="var(--gold)" stroke-width="1.4"/>
+    </svg>
+
+    <div id="admin-login-box" style="max-width:340px; width:100%;">
+      <input type="text" id="admin-password" placeholder="Senha de administrador">
+      <p class="login-error" id="admin-error">Senha incorreta. Tente novamente.</p>
+      <button class="login-btn" id="btn-admin-enter" style="width:100%;">Entrar</button>
+    </div>
+
+    <p style="margin-top:1.75rem;">
+      <a href="index.html" style="color:rgba(255,255,255,0.78); font-size:13px; font-family:'Work Sans', sans-serif;">← Voltar ao site</a>
+    </p>
+  </div>
+</div>
+
+<div class="hidden" id="admin-panel">
+  <div class="petals" id="petals-admin-panel"></div>
+  <div class="admin-header">
+    <h2>Lista de convidados</h2>
+    <button class="btn secondary" id="admin-back">Voltar</button>
+  </div>
+
+  <div class="section">
+    <div class="admin-stats">
+      <div class="stat"><span class="n" id="stat-confirmados">--</span><span class="l">confirmados</span></div>
+      <div class="stat"><span class="n" id="stat-pessoas">--</span><span class="l">pessoas no total</span></div>
+      <div class="stat"><span class="n" id="stat-nao">--</span><span class="l">não vão</span></div>
+    </div>
+
+    <p class="status" id="admin-loading">Carregando lista...</p>
+    <table id="admin-table" style="display:none;">
+      <thead><tr><th>Nome</th><th>Vem?</th><th>Pessoas</th><th>Recado</th><th>Ações</th></tr></thead>
+      <tbody id="admin-table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="section hidden" id="admin-edit-panel">
+    <h2>Editar confirmação</h2>
+    <label for="edit-name">Nome</label>
+    <input type="text" id="edit-name">
+
+    <label>Vai comparecer?</label>
+    <div class="radio-row" id="edit-attend">
+      <div class="radio-opt" data-value="sim">Sim, vou!</div>
+      <div class="radio-opt" data-value="nao">Não vou poder</div>
+    </div>
+
+    <label for="edit-guests">Quantas pessoas</label>
+    <input type="number" id="edit-guests" min="1">
+
+    <label for="edit-message">Recado</label>
+    <textarea id="edit-message"></textarea>
+
+    <div class="btn-row">
+      <button class="btn" id="edit-save" type="button">Salvar alterações</button>
+      <button class="btn secondary" id="edit-cancel" type="button">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+// ============ CONFIGURAÇÕES (edite aqui) ============
+  var ADMIN_PASSWORD = "familia2026"; // troque por outra senha quando quiser
+  var SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzYPtX1tBghLRwq10iGFgL8NoskUNIoOa8RhVOV8y8JYFj348OrtoCK56nmzqdfjN8T/exec"; // URL do Google Apps Script (/exec)
+
+// ============ TRANSIÇÃO SUAVE ENTRE TELAS ============
+  function goToScreen(hideEl, showEl){
+    hideEl.classList.add('fade-out');
+    setTimeout(function(){
+      hideEl.classList.add('hidden');
+      hideEl.classList.remove('fade-out');
+    }, 380);
+
+    showEl.classList.remove('hidden');
+    showEl.classList.add('fade-in-start');
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        showEl.classList.remove('fade-in-start');
+      });
+    });
+  }
+
+  // ============ PÉTALAS FLUTUANTES ============
+  function spawnPetals(containerId, count){
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var colors = ['var(--gold)', '#FFFFFF', 'var(--gold-soft)'];
+    for (var i = 0; i < count; i++){
+      var petal = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      petal.setAttribute('class','petal');
+      petal.setAttribute('width','14');
+      petal.setAttribute('height','16');
+      petal.setAttribute('viewBox','0 0 14 16');
+      var left = Math.random() * 100;
+      var duration = 4 + Math.random() * 3;
+      var delay = Math.random() * 4;
+      var drift = (Math.random() * 80 - 40) + 'px';
+      petal.style.left = left + '%';
+      petal.style.animationDuration = duration + 's';
+      petal.style.animationDelay = delay + 's';
+      petal.style.setProperty('--drift', drift);
+      var color = colors[i % colors.length];
+      petal.innerHTML = '<path d="M7 0C10 4 14 7 7 16C0 7 4 4 7 0Z" fill="' + color + '"/>';
+      container.appendChild(petal);
+    }
+  }
+  spawnPetals('petals-admin-login', 12);
+  spawnPetals('petals-admin-panel', 12);
+
+  // ============ NAVEGAÇÃO: LOGIN DO ADMINISTRADOR ============
+
+  document.getElementById('btn-admin-enter').addEventListener('click', function(){
+    var val = document.getElementById('admin-password').value;
+    if (val === ADMIN_PASSWORD) {
+      goToScreen(document.getElementById('login-screen'), document.getElementById('admin-panel'));
+      loadGuestList();
+    } else {
+      document.getElementById('admin-error').style.display = 'block';
+    }
+  });
+
+  document.getElementById('admin-password').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') document.getElementById('btn-admin-enter').click();
+  });
+
+  document.getElementById('admin-back').addEventListener('click', function(){
+    goToScreen(document.getElementById('admin-panel'), document.getElementById('login-screen'));
+    document.getElementById('admin-password').value = '';
+    document.getElementById('admin-error').style.display = 'none';
+  });
+
+// ============ PAINEL ADMIN: LISTA DE CONVIDADOS ============
+  var guestListCache = [];
+  var editingId = null;
+  var loadRequestToken = 0;
+  var editOpts = document.querySelectorAll('#edit-attend .radio-opt');
+  var editAttendValue = 'sim';
+  editOpts.forEach(function(opt){
+    opt.addEventListener('click', function(){
+      editOpts.forEach(function(o){ o.classList.remove('active'); });
+      opt.classList.add('active');
+      editAttendValue = opt.getAttribute('data-value');
+    });
+  });
+
+  function loadGuestList(){
+    var myToken = ++loadRequestToken;
+    var loading = document.getElementById('admin-loading');
+    var table = document.getElementById('admin-table');
+    var tbody = document.getElementById('admin-table-body');
+    document.getElementById('admin-edit-panel').classList.add('hidden');
+    loading.style.display = 'block';
+    table.style.display = 'none';
+    tbody.innerHTML = '';
+
+    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
+      loading.textContent = "Conecte a planilha do Google (SHEETS_ENDPOINT) para ver a lista aqui.";
+      return;
+    }
+
+    fetch(SHEETS_ENDPOINT)
+      .then(function(r){ return r.json(); })
+      .then(function(list){
+        if (myToken !== loadRequestToken) return; // uma busca mais nova já está em andamento, ignora esta
+        guestListCache = list;
+        tbody.innerHTML = '';
+        var confirmados = 0, pessoas = 0, naoVao = 0;
+        list.forEach(function(entry){
+          var isSim = (entry.attending === 'Sim' || entry.attending === 'sim');
+          if (isSim) { confirmados++; pessoas += parseInt(entry.guests) || 1; }
+          else { naoVao++; }
+
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + escapeHtml(entry.name) + '</td>' +
+            '<td class="' + (isSim ? 'guest-attend-sim' : 'guest-attend-nao') + '">' + (isSim ? 'Sim' : 'Não') + '</td>' +
+            '<td>' + (isSim ? escapeHtml(String(entry.guests)) : '-') + '</td>' +
+            '<td>' + escapeHtml(entry.message || '') + '</td>' +
+            '<td class="row-actions">' +
+              '<button class="row-edit" data-id="' + escapeHtml(String(entry.id)) + '">Editar</button>' +
+              '<button class="row-delete" data-id="' + escapeHtml(String(entry.id)) + '">Excluir</button>' +
+            '</td>';
+          tbody.appendChild(tr);
+        });
+        document.getElementById('stat-confirmados').textContent = confirmados;
+        document.getElementById('stat-pessoas').textContent = pessoas;
+        document.getElementById('stat-nao').textContent = naoVao;
+        loading.style.display = 'none';
+        table.style.display = 'table';
+
+        tbody.querySelectorAll('.row-edit').forEach(function(btn){
+          btn.addEventListener('click', function(){ openEditPanel(btn.getAttribute('data-id')); });
+        });
+        tbody.querySelectorAll('.row-delete').forEach(function(btn){
+          btn.disabled = !btn.getAttribute('data-id');
+          btn.addEventListener('click', function(){ deleteGuest(btn.getAttribute('data-id'), btn); });
+        });
+      })
+      .catch(function(err){
+        if (myToken !== loadRequestToken) return;
+        loading.textContent = "Não foi possível carregar a lista agora. Verifique a conexão com a planilha.";
+        console.error(err);
+      });
+  }
+
+  function openEditPanel(id){
+    var entry = guestListCache.find(function(g){ return String(g.id) === String(id); });
+    if (!entry) return;
+    editingId = id;
+    document.getElementById('edit-name').value = entry.name;
+    document.getElementById('edit-guests').value = entry.guests || 1;
+    document.getElementById('edit-message').value = entry.message || '';
+    editAttendValue = (entry.attending === 'Sim' || entry.attending === 'sim') ? 'sim' : 'nao';
+    editOpts.forEach(function(o){ o.classList.toggle('active', o.getAttribute('data-value') === editAttendValue); });
+    document.getElementById('admin-edit-panel').classList.remove('hidden');
+    document.getElementById('admin-edit-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  document.getElementById('edit-cancel').addEventListener('click', function(){
+    document.getElementById('admin-edit-panel').classList.add('hidden');
+    editingId = null;
+  });
+
+  document.getElementById('edit-save').addEventListener('click', function(){
+    if (!editingId) return;
+    var body = new URLSearchParams();
+    body.append('action', 'edit');
+    body.append('id', editingId);
+    body.append('name', document.getElementById('edit-name').value.trim());
+    body.append('attending', editAttendValue);
+    body.append('guests', document.getElementById('edit-guests').value || 1);
+    body.append('message', document.getElementById('edit-message').value.trim());
+
+    fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
+      .then(function(){
+        document.getElementById('admin-edit-panel').classList.add('hidden');
+        editingId = null;
+        loadGuestList();
+      })
+      .catch(function(err){ console.error("Não foi possível salvar a edição:", err); });
+  });
+
+  function deleteGuest(id, btnEl){
+    if (!id) {
+      window.alert('Esse registro é de antes da atualização e não tem identificação — para removê-lo, apague a linha diretamente na planilha do Google.');
+      return;
+    }
+    if (!window.confirm('Tem certeza que deseja excluir esse convidado da lista?')) return;
+    if (btnEl) btnEl.disabled = true;
+    var body = new URLSearchParams();
+    body.append('action', 'delete');
+    body.append('id', id);
+    fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
+      .then(function(){ loadGuestList(); })
+      .catch(function(err){
+        console.error("Não foi possível excluir o convidado:", err);
+        if (btnEl) btnEl.disabled = false;
+      });
+  }
+
+  function escapeHtml(str){
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+})();
+
+</script>
+</body>
+</html>
