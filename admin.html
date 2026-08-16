@@ -293,6 +293,7 @@
     width:100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--card-line); display:block;
   }
   .photo-caption{ font-size: 11px; color: var(--ink-soft); margin-top: 4px; text-align:center; line-height:1.3; }
+  .photo-name{ font-size: 11px; color: var(--emerald-deep); font-weight: 500; margin-bottom: 4px; text-align:center; }
   .photo-item{ position:relative; }
   .photo-item .photo-delete{
     position:absolute; top:4px; right:4px; background: rgba(179,73,47,0.85); color:#fff; border:none;
@@ -513,6 +514,7 @@
       goToScreen(document.getElementById('login-screen'), document.getElementById('admin-panel'));
       loadGuestList();
       loadPhotoGallery();
+      startAdminPhotoGalleryAutoRefresh();
     } else {
       document.getElementById('admin-error').style.display = 'block';
     }
@@ -526,6 +528,7 @@
     goToScreen(document.getElementById('admin-panel'), document.getElementById('login-screen'));
     document.getElementById('admin-password').value = '';
     document.getElementById('admin-error').style.display = 'none';
+    stopAdminPhotoGalleryAutoRefresh();
   });
 
 // ============ PAINEL ADMIN: LISTA DE CONVIDADOS ============
@@ -662,12 +665,16 @@
     return match ? 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w' + (size || 300) : url;
   }
 
-  function loadPhotoGallery(){
+  var lastAdminPhotoIds = null;
+
+  function loadPhotoGallery(silent){
     var loading = document.getElementById('admin-gallery-loading');
     var grid = document.getElementById('admin-photo-gallery');
-    loading.style.display = 'block';
-    loading.textContent = 'Carregando fotos...';
-    grid.innerHTML = '';
+    if (!silent) {
+      loading.style.display = 'block';
+      loading.textContent = 'Carregando fotos...';
+      grid.innerHTML = '';
+    }
 
     if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
       loading.textContent = 'Conecte a planilha (SHEETS_ENDPOINT) para ver a galeria.';
@@ -677,7 +684,13 @@
     fetch(SHEETS_ENDPOINT + '?type=photos')
       .then(function(r){ return r.json(); })
       .then(function(list){
+        var ids = (list || []).map(function(p){ return p.id; }).join(',');
+        if (silent && ids === lastAdminPhotoIds) return; // nada novo, evita piscar a tela à toa
+        lastAdminPhotoIds = ids;
+
+        grid.innerHTML = '';
         if (!list || !list.length) {
+          loading.style.display = 'block';
           loading.textContent = 'Nenhuma foto enviada ainda.';
           return;
         }
@@ -685,13 +698,14 @@
         list.slice().reverse().forEach(function(p){
           var item = document.createElement('div');
           item.className = 'photo-item';
-          var caption = p.caption || '';
-          var who = p.name ? ('De: ' + p.name) : '';
+          var rawCaption = p.caption || '';
+          var caption = rawCaption.length > 10 ? rawCaption.slice(0, 10) + '...' : rawCaption;
+          var name = p.name || '';
           item.innerHTML =
+            (name ? '<div class="photo-name">' + escapeHtml(name) + '</div>' : '') +
             '<a href="' + p.url + '" target="_blank" rel="noopener"><img src="' + driveThumb(p.url, 300) + '" loading="lazy" alt=""></a>' +
             '<button class="photo-delete" data-id="' + escapeHtml(String(p.id)) + '" type="button">Excluir</button>' +
-            (caption ? '<div class="photo-caption">' + escapeHtml(caption) + '</div>' : '') +
-            (who ? '<div class="photo-caption">' + escapeHtml(who) + '</div>' : '');
+            (caption ? '<div class="photo-caption">' + escapeHtml(caption) + '</div>' : '');
           item.querySelector('.photo-delete').addEventListener('click', function(){
             deletePhoto(p.id, item);
           });
@@ -702,6 +716,16 @@
         loading.textContent = 'Não foi possível carregar a galeria agora.';
         console.error(err);
       });
+  }
+
+  var adminPhotoGalleryInterval = null;
+  function startAdminPhotoGalleryAutoRefresh(){
+    if (adminPhotoGalleryInterval) return;
+    adminPhotoGalleryInterval = setInterval(function(){ loadPhotoGallery(true); }, 15000);
+  }
+  function stopAdminPhotoGalleryAutoRefresh(){
+    clearInterval(adminPhotoGalleryInterval);
+    adminPhotoGalleryInterval = null;
   }
 
   function deletePhoto(id, itemEl){
