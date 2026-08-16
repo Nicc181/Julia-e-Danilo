@@ -446,6 +446,12 @@
       <button class="btn secondary" id="edit-cancel" type="button">Cancelar</button>
     </div>
   </div>
+
+  <div class="section">
+    <h2>Fotos dos convidados</h2>
+    <p class="status" id="admin-gallery-loading">Carregando fotos...</p>
+    <div class="photo-gallery" id="admin-photo-gallery"></div>
+  </div>
 </div>
 
 <script>
@@ -506,6 +512,7 @@
     if (val === ADMIN_PASSWORD) {
       goToScreen(document.getElementById('login-screen'), document.getElementById('admin-panel'));
       loadGuestList();
+      loadPhotoGallery();
     } else {
       document.getElementById('admin-error').style.display = 'block';
     }
@@ -647,6 +654,68 @@
       .catch(function(err){
         console.error("Não foi possível excluir o convidado:", err);
         if (btnEl) btnEl.disabled = false;
+      });
+  }
+
+  function driveThumb(url, size){
+    var match = String(url).match(/[-\w]{25,}/);
+    return match ? 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w' + (size || 300) : url;
+  }
+
+  function loadPhotoGallery(){
+    var loading = document.getElementById('admin-gallery-loading');
+    var grid = document.getElementById('admin-photo-gallery');
+    loading.style.display = 'block';
+    loading.textContent = 'Carregando fotos...';
+    grid.innerHTML = '';
+
+    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
+      loading.textContent = 'Conecte a planilha (SHEETS_ENDPOINT) para ver a galeria.';
+      return;
+    }
+
+    fetch(SHEETS_ENDPOINT + '?type=photos')
+      .then(function(r){ return r.json(); })
+      .then(function(list){
+        if (!list || !list.length) {
+          loading.textContent = 'Nenhuma foto enviada ainda.';
+          return;
+        }
+        loading.style.display = 'none';
+        list.slice().reverse().forEach(function(p){
+          var item = document.createElement('div');
+          item.className = 'photo-item';
+          var caption = p.caption || '';
+          var who = p.name ? ('De: ' + p.name) : '';
+          item.innerHTML =
+            '<a href="' + p.url + '" target="_blank" rel="noopener"><img src="' + driveThumb(p.url, 300) + '" loading="lazy" alt=""></a>' +
+            '<button class="photo-delete" data-id="' + escapeHtml(String(p.id)) + '" type="button">Excluir</button>' +
+            (caption ? '<div class="photo-caption">' + escapeHtml(caption) + '</div>' : '') +
+            (who ? '<div class="photo-caption">' + escapeHtml(who) + '</div>' : '');
+          item.querySelector('.photo-delete').addEventListener('click', function(){
+            deletePhoto(p.id, item);
+          });
+          grid.appendChild(item);
+        });
+      })
+      .catch(function(err){
+        loading.textContent = 'Não foi possível carregar a galeria agora.';
+        console.error(err);
+      });
+  }
+
+  function deletePhoto(id, itemEl){
+    if (!window.confirm('Tem certeza que deseja excluir essa foto?')) return;
+    var btn = itemEl.querySelector('.photo-delete');
+    if (btn) btn.disabled = true;
+    var body = new URLSearchParams();
+    body.append('action', 'delete-photo');
+    body.append('id', id);
+    fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
+      .then(function(){ loadPhotoGallery(); })
+      .catch(function(err){
+        console.error('Não foi possível excluir a foto:', err);
+        if (btn) btn.disabled = false;
       });
   }
 
