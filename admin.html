@@ -355,20 +355,6 @@
     background: var(--card); border: 1px solid var(--card-line); border-radius: 20px;
     padding: 8px 18px; display:inline-block;
   }
-  .guest-manager{
-    margin-bottom:1.25rem;
-  }
-  .guest-manager-form{
-    display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end;
-  }
-  .guest-manager-form .field label{margin-bottom:5px;}
-  .guest-manager-form .btn{height:42px;}
-  .guest-list-table{margin-top:1rem;}
-  .guest-list-table td,.guest-list-table th{vertical-align:middle;}
-  .guest-list-empty{padding:12px 0;color:var(--ink-soft);font-size:13px;}
-  @media(max-width:650px){
-    .guest-manager-form{grid-template-columns:1fr;}
-  }
 </style>
 </head>
 <body>
@@ -423,31 +409,6 @@
   <div class="admin-header">
     <h2>Lista de convidados</h2>
     <button class="btn secondary" id="admin-back">Voltar</button>
-  </div>
-
-  <div class="section guest-manager">
-    <h2>Convidados autorizados</h2>
-    <p class="status">Cadastre aqui os nomes que poderão acessar o site e confirmar presença. O convidado não precisa de código.</p>
-
-    <div class="guest-manager-form">
-      <div class="field">
-        <label for="guest-new-name">Nome do convidado</label>
-        <input type="text" id="guest-new-name" placeholder="Nome completo">
-      </div>
-      <div class="field">
-        <label for="guest-new-max">Pessoas permitidas</label>
-        <input type="number" id="guest-new-max" min="1" value="1">
-      </div>
-      <button class="btn" id="guest-add-btn" type="button">Adicionar convidado</button>
-    </div>
-    <p class="status" id="guest-manager-status"></p>
-
-    <div id="guest-list-loading" class="status">Carregando convidados autorizados...</div>
-    <table class="guest-list-table" id="guest-list-table" style="display:none;">
-      <thead><tr><th>Nome</th><th>Permitidos</th><th>Ações</th></tr></thead>
-      <tbody id="guest-list-body"></tbody>
-    </table>
-    <p class="guest-list-empty hidden" id="guest-list-empty">Nenhum convidado cadastrado ainda.</p>
   </div>
 
   <div class="section">
@@ -551,7 +512,6 @@
     var val = document.getElementById('admin-password').value;
     if (val === ADMIN_PASSWORD) {
       goToScreen(document.getElementById('login-screen'), document.getElementById('admin-panel'));
-      loadAuthorizedGuests();
       loadGuestList();
       loadPhotoGallery();
       startAdminPhotoGalleryAutoRefresh();
@@ -571,159 +531,7 @@
     stopAdminPhotoGalleryAutoRefresh();
   });
 
-// ============ PAINEL ADMIN: CONVIDADOS AUTORIZADOS ============
-  var authorizedGuestCache = [];
-  var authorizedLoadToken = 0;
-
-  function loadAuthorizedGuests(){
-    var token = ++authorizedLoadToken;
-    var loading = document.getElementById('guest-list-loading');
-    var table = document.getElementById('guest-list-table');
-    var tbody = document.getElementById('guest-list-body');
-    var empty = document.getElementById('guest-list-empty');
-
-    loading.style.display = 'block';
-    table.style.display = 'none';
-    empty.classList.add('hidden');
-    tbody.innerHTML = '';
-
-    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
-      loading.textContent = 'Conecte a planilha do Google (SHEETS_ENDPOINT) para gerenciar os convidados.';
-      return;
-    }
-
-    fetch(SHEETS_ENDPOINT + '?type=authorizedGuests')
-      .then(function(r){ return r.json(); })
-      .then(function(list){
-        if (token !== authorizedLoadToken) return;
-        authorizedGuestCache = list || [];
-        loading.style.display = 'none';
-
-        if (!authorizedGuestCache.length) {
-          empty.classList.remove('hidden');
-          return;
-        }
-
-        authorizedGuestCache.forEach(function(guest){
-          var tr = document.createElement('tr');
-          tr.innerHTML =
-            '<td>' + escapeHtml(guest.name || '') + '</td>' +
-            '<td>' + escapeHtml(String(guest.maxGuests || 1)) + '</td>' +
-            '<td class="row-actions">' +
-              '<button class="row-edit guest-edit" data-id="' + escapeHtml(String(guest.id)) + '">Editar</button>' +
-              '<button class="row-delete guest-delete" data-id="' + escapeHtml(String(guest.id)) + '">Excluir</button>' +
-            '</td>';
-          tbody.appendChild(tr);
-        });
-
-        table.style.display = 'table';
-
-        tbody.querySelectorAll('.guest-edit').forEach(function(btn){
-          btn.addEventListener('click', function(){
-            var guest = authorizedGuestCache.find(function(g){ return String(g.id) === String(btn.getAttribute('data-id')); });
-            if (!guest) return;
-            var newName = window.prompt('Nome do convidado:', guest.name || '');
-            if (newName === null) return;
-            newName = newName.trim();
-            if (!newName) return;
-            var newMax = window.prompt('Quantidade de pessoas permitidas:', String(guest.maxGuests || 1));
-            if (newMax === null) return;
-            newMax = Math.max(1, parseInt(newMax, 10) || 1);
-
-            var body = new URLSearchParams();
-            body.append('action', 'edit-authorized');
-            body.append('id', guest.id);
-            body.append('name', newName);
-            body.append('maxGuests', newMax);
-
-            fetch(SHEETS_ENDPOINT, {method:'POST', body:body})
-              .then(function(r){ return r.json(); })
-              .then(function(result){
-                if (!result || result.result !== 'edited') throw new Error('A edição não foi confirmada pelo servidor.');
-                loadAuthorizedGuests();
-              })
-              .catch(function(err){ console.error('Não foi possível editar convidado:', err); alert('Não foi possível editar o convidado. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.'); });
-          });
-        });
-
-        tbody.querySelectorAll('.guest-delete').forEach(function(btn){
-          btn.addEventListener('click', function(){
-            var id = btn.getAttribute('data-id');
-            if (!id || !window.confirm('Excluir este convidado da lista autorizada?')) return;
-            btn.disabled = true;
-            var body = new URLSearchParams();
-            body.append('action', 'delete-authorized');
-            body.append('id', id);
-            fetch(SHEETS_ENDPOINT, {method:'POST', body:body})
-              .then(function(r){ return r.json(); })
-              .then(function(result){
-                if (!result || result.result !== 'deleted') throw new Error('A exclusão não foi confirmada pelo servidor.');
-                loadAuthorizedGuests();
-              })
-              .catch(function(err){
-                console.error('Não foi possível excluir convidado:', err);
-                btn.disabled = false;
-                alert('Não foi possível excluir o convidado. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.');
-              });
-          });
-        });
-      })
-      .catch(function(err){
-        if (token !== authorizedLoadToken) return;
-        loading.textContent = 'Não foi possível carregar os convidados autorizados.';
-        console.error(err);
-      });
-  }
-
-  document.getElementById('guest-add-btn').addEventListener('click', function(){
-    var nameInput = document.getElementById('guest-new-name');
-    var maxInput = document.getElementById('guest-new-max');
-    var status = document.getElementById('guest-manager-status');
-    var name = nameInput.value.trim();
-    var maxGuests = Math.max(1, parseInt(maxInput.value, 10) || 1);
-
-    if (!name) {
-      status.textContent = 'Informe o nome do convidado.';
-      return;
-    }
-    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
-      status.textContent = 'A planilha ainda não está conectada.';
-      return;
-    }
-
-    var btn = this;
-    btn.disabled = true;
-    status.textContent = 'Adicionando...';
-
-    var body = new URLSearchParams();
-    body.append('action', 'add-authorized');
-    body.append('name', name);
-    body.append('maxGuests', maxGuests);
-
-    fetch(SHEETS_ENDPOINT, {method:'POST', body:body})
-      .then(function(r){ return r.json(); })
-      .then(function(result){
-        if (result && result.duplicate) {
-          status.textContent = 'Esse nome já está cadastrado.';
-          return;
-        }
-        nameInput.value = '';
-        maxInput.value = 1;
-        status.textContent = 'Convidado adicionado à lista.';
-        loadAuthorizedGuests();
-      })
-      .catch(function(err){
-        console.error('Não foi possível adicionar convidado:', err);
-        status.textContent = 'Não foi possível adicionar. Tente novamente.';
-      })
-      .finally(function(){ btn.disabled = false; });
-  });
-
-  document.getElementById('guest-new-name').addEventListener('keydown', function(e){
-    if (e.key === 'Enter') document.getElementById('guest-add-btn').click();
-  });
-
-  // ============ PAINEL ADMIN: LISTA DE CONVIDADOS ============
+// ============ PAINEL ADMIN: LISTA DE CONVIDADOS ============
   var guestListCache = [];
   var editingId = null;
   var loadRequestToken = 0;
@@ -826,17 +634,12 @@
     body.append('message', document.getElementById('edit-message').value.trim());
 
     fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
-      .then(function(r){ return r.json(); })
-      .then(function(result){
-        if (!result || result.result !== 'edited') throw new Error('A edição não foi confirmada pelo servidor.');
+      .then(function(){
         document.getElementById('admin-edit-panel').classList.add('hidden');
         editingId = null;
         loadGuestList();
       })
-      .catch(function(err){
-        console.error("Não foi possível salvar a edição:", err);
-        alert('Não foi possível salvar a edição. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.');
-      });
+      .catch(function(err){ console.error("Não foi possível salvar a edição:", err); });
   });
 
   function deleteGuest(id, btnEl){
@@ -850,15 +653,10 @@
     body.append('action', 'delete');
     body.append('id', id);
     fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
-      .then(function(r){ return r.json(); })
-      .then(function(result){
-        if (!result || result.result !== 'deleted') throw new Error('A exclusão não foi confirmada pelo servidor.');
-        loadGuestList();
-      })
+      .then(function(){ loadGuestList(); })
       .catch(function(err){
         console.error("Não foi possível excluir o convidado:", err);
         if (btnEl) btnEl.disabled = false;
-        alert('Não foi possível excluir o convidado. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.');
       });
   }
 
