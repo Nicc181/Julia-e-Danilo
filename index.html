@@ -331,7 +331,27 @@
     background: var(--card); border: 1px solid var(--card-line); border-radius: 20px;
     padding: 8px 18px; display:inline-block;
   }
-  </style>
+    .guest-access-panel{
+    position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+    padding:24px; background:rgba(3,42,30,0.72); backdrop-filter:blur(6px);
+  }
+  .guest-access-panel.hidden{display:none;}
+  .guest-access-card{
+    width:min(420px,100%); padding:2rem; border-radius:16px; background:var(--card);
+    border:1.5px solid var(--card-line); box-shadow:0 20px 60px rgba(0,0,0,.28); text-align:center;
+  }
+  .guest-access-title{margin:.2rem 0 .5rem; font:600 italic 2rem 'Cormorant Garamond',serif;color:var(--emerald-deep);}
+  .guest-access-text{margin:0 0 1.2rem;color:var(--ink-soft);font-size:13px;line-height:1.6;}
+  .guest-access-card label{display:block;text-align:left;margin:.7rem 0 .4rem;}
+  .guest-access-card input{width:100%;}
+  .guest-access-card .login-error{min-height:20px;margin:.6rem 0;color:#B3492F;}
+  .guest-access-back{
+    display:block;margin:12px auto 0;border:0;background:none;color:var(--emerald-deep);
+    cursor:pointer;font:500 13px 'Work Sans',sans-serif;
+  }
+  #rsvp-name[readonly]{background:#f4f0df;color:var(--ink);cursor:not-allowed;}
+  .rsvp-access-note{margin:-.3rem 0 1rem;color:var(--ink-soft);font-size:12px;}
+</style>
 </head>
 <body>
 
@@ -375,6 +395,19 @@
     </div>
   </div>
 </div>
+
+  <div class="guest-access-panel hidden" id="guest-access-panel">
+    <div class="guest-access-card">
+      <p class="login-eyebrow">Acesso aos convidados</p>
+      <p class="guest-access-title">Encontre seu convite</p>
+      <p class="guest-access-text">Digite seu nome exatamente como foi cadastrado pelos noivos.</p>
+      <label for="guest-access-name">Nome</label>
+      <input type="text" id="guest-access-name" placeholder="Ex.: Maria da Silva" autocomplete="name">
+      <p class="login-error" id="guest-access-error"></p>
+      <button class="login-btn" id="guest-access-submit" type="button">Continuar</button>
+      <button class="guest-access-back" id="guest-access-back" type="button">← Voltar</button>
+    </div>
+  </div>
 
 <!-- =============== SITE PRINCIPAL (CONVIDADOS) =============== -->
 <div class="page hidden" id="main-site">
@@ -452,22 +485,7 @@
     <div class="story-text">
       <p>[Espaço reservado — conte aqui como Júlia e Danilo se conheceram: onde, quando, e o que tornou aquele encontro especial.]</p>
       <p>[Espaço reservado — um momento marcante da relação: uma viagem, um desafio superado juntos, ou o que fez vocês perceberem que era pra sempre.]</p>
-      <p>Como foi o Pedido de Casamento(Contado por Danilo)</p>
-
-<p>Posso dizer que aquilo que não havia subido à minha mente nem descido ao meu coração foi o que Deus fez!! No meio de 2025, surgiu o convite dos meus sogros para irmos à Europa. Naquele momento, 
-eu já sabia que poderia aproveitar essa viagem para pedir a Júlia em casamento. Começamos os preparativos e definimos nossa rota: Alemanha, Holanda, Bélgica, Paris e Luxemburgo. Em março de 2026, 
-contei a alguns amigos sobre minha decisão e comecei a planejar cada detalhe. Passei noites pesquisando, porque queria que fosse algo especial para nós e que se tornasse um marco na nossa história.
-<p>Escolhi Paris e imaginei o pedido no Sena, durante um passeio de barco. A ideia era estar passando em frente à Torre Eiffel às 22h, justamente quando suas luzes começariam a piscar. Também fui atrás do anel, 
-procurando algo bonito e diferente do comum. Depois de comprar o anel, marquei um café da manhã com meu sogro para conversar. Estava apreensivo com a reação dele, mas fui surpreendido quando ele disse que não tinha nenhuma objeção. </p>
-
-<p>Conversamos sobre sonhos e expectativas, e aquele momento foi muito mais do que uma conversa entre sogro e genro: foi uma conversa de pai e filho. Chegou então o dia 19/05/2026. E, como toda boa história, 
-começou com um pouco de caos: fomos multados na estação de trem e decidimos "dar um susto na pobreza" kkkkk. Depois, aproveitamos Paris com sopa de cebola, escargot, vinho e uma bela conta de restaurante francês.
-Por estarmos cansados, acabamos fazendo o passeio de barco antes do horário que eu havia planejado originalmente. E, no meio de tudo, minha sogra foi fundamental: ficou responsável por levar as alianças escondidas.</p>
-
-<p>Até que chegou o momento. No Sena, diante da Torre Eiffel, peguei a aliança e fiz a pergunta que havia planejado durante meses.</p>
-
-<p>E ela disse sim. ❤️💍</p>
-<p>O que começou como um convite para uma viagem à Europa terminou com um dos momentos mais importantes das nossas vidas. E, olhando para tudo hoje, só consigo reconhecer: Deus fez muito mais do que aquilo que eu poderia imaginar.</p>
+      <p>[Espaço reservado — conte sobre o pedido de casamento: como e onde aconteceu.]</p>
     </div>
   </div>
 </div>
@@ -488,8 +506,9 @@ Por estarmos cansados, acabamos fazendo o passeio de barco antes do horário que
   <div class="section">
     <h2>Confirmar presença</h2>
     <form id="rsvp-form">
-      <label for="rsvp-name">Nome</label>
-      <input type="text" id="rsvp-name" placeholder="Seu nome" required>
+      <label for="rsvp-name">Convidado</label>
+      <input type="text" id="rsvp-name" placeholder="Seu nome" readonly required>
+      <p class="rsvp-access-note">O nome é definido a partir da lista de convidados dos noivos.</p>
 
       <label>Você vai?</label>
       <div class="radio-row" id="rsvp-attend">
@@ -637,14 +656,81 @@ Por estarmos cansados, acabamos fazendo o passeio de barco antes do horário que
   spawnPetals('petals-main', 16);
 
   // ============ NAVEGAÇÃO: LOGIN ============
-  document.getElementById('btn-guest').addEventListener('click', function(){
-    goToScreen(document.getElementById('login-screen'), document.getElementById('main-site'));
+  var authorizedGuest = null;
+
+  function openGuestAccess(){
+    document.getElementById('guest-access-panel').classList.remove('hidden');
+    document.getElementById('guest-access-name').value = '';
+    document.getElementById('guest-access-error').textContent = '';
+    setTimeout(function(){ document.getElementById('guest-access-name').focus(); }, 50);
+  }
+
+  function closeGuestAccess(){
+    document.getElementById('guest-access-panel').classList.add('hidden');
+    document.getElementById('guest-access-error').textContent = '';
+  }
+
+  document.getElementById('btn-guest').addEventListener('click', openGuestAccess);
+  document.getElementById('guest-access-back').addEventListener('click', closeGuestAccess);
+
+  function verifyGuest(){
+    var name = document.getElementById('guest-access-name').value.trim();
+    var error = document.getElementById('guest-access-error');
+    var button = document.getElementById('guest-access-submit');
+
+    if (!name) {
+      error.textContent = 'Digite seu nome para continuar.';
+      return;
+    }
+    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
+      error.textContent = 'A lista de convidados ainda não está conectada.';
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Verificando...';
+    error.textContent = '';
+
+    fetch(SHEETS_ENDPOINT + '?type=checkGuest&name=' + encodeURIComponent(name))
+      .then(function(r){ return r.json(); })
+      .then(function(result){
+        if (!result || !result.found) {
+          error.textContent = 'Não encontramos esse nome na lista de convidados. Verifique a grafia ou fale com os noivos.';
+          return;
+        }
+
+        authorizedGuest = result.guest;
+        document.getElementById('rsvp-name').value = result.guest.name;
+        var guestLimit = parseInt(result.guest.maxGuests, 10) || 1;
+        var guestInput = document.getElementById('rsvp-guests');
+        guestInput.max = guestLimit;
+        guestInput.value = Math.min(parseInt(guestInput.value, 10) || 1, guestLimit);
+
+        closeGuestAccess();
+        goToScreen(document.getElementById('login-screen'), document.getElementById('main-site'));
+      })
+      .catch(function(err){
+        console.error('Não foi possível verificar o convidado:', err);
+        error.textContent = 'Não foi possível verificar agora. Tente novamente.';
+      })
+      .finally(function(){
+        button.disabled = false;
+        button.textContent = 'Continuar';
+      });
+  }
+
+  document.getElementById('guest-access-submit').addEventListener('click', verifyGuest);
+  document.getElementById('guest-access-name').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') verifyGuest();
   });
 
   document.getElementById('btn-guest-back').addEventListener('click', function(){
+    authorizedGuest = null;
+    document.getElementById('rsvp-name').value = '';
     goToScreen(document.getElementById('main-site'), document.getElementById('login-screen'));
     stopPhotoGalleryAutoRefresh();
   });
+
 
 // ============ TABS ============
   var tabButtons = document.querySelectorAll('.tabbtn');
@@ -716,7 +802,9 @@ Por estarmos cansados, acabamos fazendo o passeio de barco antes do horário que
   }
 
   function resetRsvpForm(){
-    document.getElementById('rsvp-name').value = '';
+    document.getElementById('rsvp-name').value = authorizedGuest ? authorizedGuest.name : '';
+    var maxGuests = authorizedGuest ? (parseInt(authorizedGuest.maxGuests, 10) || 1) : 1;
+    document.getElementById('rsvp-guests').max = maxGuests;
     document.getElementById('rsvp-guests').value = 1;
     document.getElementById('rsvp-msg').value = '';
     attendValue = 'sim';
@@ -725,9 +813,17 @@ Por estarmos cansados, acabamos fazendo o passeio de barco antes do horário que
 
   document.getElementById('rsvp-form').addEventListener('submit', function(e){
     e.preventDefault();
-    var name = document.getElementById('rsvp-name').value.trim();
-    if (!name) return;
-    var guests = document.getElementById('rsvp-guests').value || 1;
+    if (!authorizedGuest) {
+      alert('Primeiro encontre seu nome na lista de convidados.');
+      openGuestAccess();
+      return;
+    }
+    var name = authorizedGuest.name;
+    var maxGuests = parseInt(authorizedGuest.maxGuests, 10) || 1;
+    var guests = parseInt(document.getElementById('rsvp-guests').value, 10) || 1;
+    if (guests < 1) guests = 1;
+    if (guests > maxGuests) guests = maxGuests;
+    document.getElementById('rsvp-guests').value = guests;
     var msg = document.getElementById('rsvp-msg').value.trim();
 
     var body = new URLSearchParams();
