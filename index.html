@@ -691,10 +691,13 @@
     button.textContent = 'Verificando...';
     error.textContent = '';
 
-    fetch(SHEETS_ENDPOINT + '?type=checkGuest&name=' + encodeURIComponent(name))
-      .then(function(r){ return r.json(); })
+    fetch(SHEETS_ENDPOINT + '?type=checkGuest&name=' + encodeURIComponent(name), { cache: 'no-store' })
+      .then(function(r){
+        if (!r.ok) throw new Error('Resposta inválida do servidor.');
+        return r.json();
+      })
       .then(function(result){
-        if (!result || !result.found) {
+        if (!result || result.found !== true || !result.guest || !result.guest.name) {
           error.textContent = 'Não encontramos esse nome na lista de convidados. Verifique a grafia ou fale com os noivos.';
           return;
         }

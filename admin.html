@@ -637,8 +637,12 @@
             body.append('maxGuests', newMax);
 
             fetch(SHEETS_ENDPOINT, {method:'POST', body:body})
-              .then(function(){ loadAuthorizedGuests(); })
-              .catch(function(err){ console.error('Não foi possível editar convidado:', err); });
+              .then(function(r){ return r.json(); })
+              .then(function(result){
+                if (!result || result.result !== 'edited') throw new Error('A edição não foi confirmada pelo servidor.');
+                loadAuthorizedGuests();
+              })
+              .catch(function(err){ console.error('Não foi possível editar convidado:', err); alert('Não foi possível editar o convidado. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.'); });
           });
         });
 
@@ -651,10 +655,15 @@
             body.append('action', 'delete-authorized');
             body.append('id', id);
             fetch(SHEETS_ENDPOINT, {method:'POST', body:body})
-              .then(function(){ loadAuthorizedGuests(); })
+              .then(function(r){ return r.json(); })
+              .then(function(result){
+                if (!result || result.result !== 'deleted') throw new Error('A exclusão não foi confirmada pelo servidor.');
+                loadAuthorizedGuests();
+              })
               .catch(function(err){
                 console.error('Não foi possível excluir convidado:', err);
                 btn.disabled = false;
+                alert('Não foi possível excluir o convidado. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.');
               });
           });
         });
@@ -817,12 +826,17 @@
     body.append('message', document.getElementById('edit-message').value.trim());
 
     fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
-      .then(function(){
+      .then(function(r){ return r.json(); })
+      .then(function(result){
+        if (!result || result.result !== 'edited') throw new Error('A edição não foi confirmada pelo servidor.');
         document.getElementById('admin-edit-panel').classList.add('hidden');
         editingId = null;
         loadGuestList();
       })
-      .catch(function(err){ console.error("Não foi possível salvar a edição:", err); });
+      .catch(function(err){
+        console.error("Não foi possível salvar a edição:", err);
+        alert('Não foi possível salvar a edição. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.');
+      });
   });
 
   function deleteGuest(id, btnEl){
@@ -836,10 +850,15 @@
     body.append('action', 'delete');
     body.append('id', id);
     fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
-      .then(function(){ loadGuestList(); })
+      .then(function(r){ return r.json(); })
+      .then(function(result){
+        if (!result || result.result !== 'deleted') throw new Error('A exclusão não foi confirmada pelo servidor.');
+        loadGuestList();
+      })
       .catch(function(err){
         console.error("Não foi possível excluir o convidado:", err);
         if (btnEl) btnEl.disabled = false;
+        alert('Não foi possível excluir o convidado. Verifique se o Google Apps Script foi atualizado e publicado como nova versão.');
       });
   }
 
