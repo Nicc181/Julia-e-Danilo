@@ -349,9 +349,9 @@
   }
   .row-actions button.row-edit{ color: var(--emerald); border-color: var(--emerald); }
   .row-actions button.row-delete{ color: #B3492F; border-color: #E0BBAE; }
-  .guestlist-add-row{ display:flex; gap: 8px; margin: 0.9rem 0 1.1rem; }
-  .guestlist-add-row input{ flex:1; }
-  .guestlist-add-row button{ white-space: nowrap; }
+  .guestlist-add-row{ display:flex; flex-direction:column; gap: 8px; margin: 0.9rem 0 1.1rem; }
+  .guestlist-add-row textarea{ min-height: 96px; }
+  .guestlist-add-row button{ align-self: flex-end; white-space: nowrap; }
 
   .footer-note{
     text-align:center; font-size: 11px; color: var(--ink-soft); letter-spacing: 0.08em; text-transform: uppercase;
@@ -419,22 +419,21 @@
 
   <div class="section">
     <h2>Convidados</h2>
-    <p class="status-strong">Só quem estiver nesta lista consegue confirmar presença pelo site. Adicione os nomes como devem ser digitados no convite — a confirmação, a quantidade de pessoas e o recado aparecem aqui assim que o convidado responder (e você pode editar tudo isso a qualquer momento).</p>
+    <p class="status-strong">Só quem estiver nesta lista consegue confirmar presença pelo site. Cole um nome por linha, exatamente como deve aparecer no convite — a confirmação e o recado aparecem aqui assim que o convidado responder (e você pode editar tudo isso a qualquer momento).</p>
     <div class="guestlist-add-row">
-      <input type="text" id="new-guest-name" placeholder="Nome do convidado">
-      <button class="btn gold" id="add-guest-btn" type="button">Adicionar</button>
+      <textarea id="new-guest-names" placeholder="Um nome por linha, por exemplo:&#10;Maria Eduarda Costa&#10;João Pedro Silva&#10;Ana Clara Souza"></textarea>
+      <button class="btn gold" id="add-guest-btn" type="button">Adicionar convidados</button>
     </div>
 
     <div class="admin-stats">
       <div class="stat"><span class="n" id="stat-confirmados">--</span><span class="l">confirmados</span></div>
-      <div class="stat"><span class="n" id="stat-pessoas">--</span><span class="l">pessoas no total</span></div>
       <div class="stat"><span class="n" id="stat-nao">--</span><span class="l">não vão</span></div>
       <div class="stat"><span class="n" id="stat-pendentes">--</span><span class="l">aguardando</span></div>
     </div>
 
     <p class="status" id="admin-loading">Carregando lista...</p>
     <table id="admin-table" style="display:none;">
-      <thead><tr><th>Nome</th><th>Vem?</th><th>Pessoas</th><th>Recado</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Vem?</th><th>Recado</th><th>Ações</th></tr></thead>
       <tbody id="admin-table-body"></tbody>
     </table>
   </div>
@@ -449,9 +448,6 @@
       <div class="radio-opt" data-value="sim">Sim, vou!</div>
       <div class="radio-opt" data-value="nao">Não vou poder</div>
     </div>
-
-    <label for="edit-guests">Quantas pessoas</label>
-    <input type="number" id="edit-guests" min="1">
 
     <label for="edit-message">Recado</label>
     <textarea id="edit-message"></textarea>
@@ -545,23 +541,32 @@
     stopAdminPhotoGalleryAutoRefresh();
   });
 
-// ============ PAINEL ADMIN: ADICIONAR CONVIDADO AUTORIZADO ============
-  document.getElementById('add-guest-btn').addEventListener('click', addGuest);
-  document.getElementById('new-guest-name').addEventListener('keydown', function(e){
-    if (e.key === 'Enter') addGuest();
-  });
+// ============ PAINEL ADMIN: ADICIONAR CONVIDADOS AUTORIZADOS (em lote) ============
+  document.getElementById('add-guest-btn').addEventListener('click', addGuests);
 
-  function addGuest(){
-    var input = document.getElementById('new-guest-name');
-    var name = input.value.trim();
-    if (!name) return;
+  function addGuests(){
+    var textarea = document.getElementById('new-guest-names');
+    var names = textarea.value.split('\n').map(function(n){ return n.trim(); }).filter(Boolean);
+    if (!names.length) return;
+
+    var btn = document.getElementById('add-guest-btn');
+    btn.disabled = true;
+    btn.textContent = 'Adicionando...';
+
     var body = new URLSearchParams();
-    body.append('action', 'add-guest');
-    body.append('id', Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
-    body.append('name', name);
+    body.append('action', 'add-guests');
+    body.append('names', JSON.stringify(names));
+
     fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
-      .then(function(){ input.value = ''; loadGuestList(); })
-      .catch(function(err){ console.error('Não foi possível adicionar o convidado:', err); });
+      .then(function(){
+        textarea.value = '';
+        loadGuestList();
+      })
+      .catch(function(err){ console.error('Não foi possível adicionar os convidados:', err); })
+      .finally(function(){
+        btn.disabled = false;
+        btn.textContent = 'Adicionar convidados';
+      });
   }
 
 // ============ PAINEL ADMIN: LISTA DE CONVIDADOS ============
@@ -599,11 +604,11 @@
         if (myToken !== loadRequestToken) return; // uma busca mais nova já está em andamento, ignora esta
         guestListCache = list;
         tbody.innerHTML = '';
-        var confirmados = 0, pessoas = 0, naoVao = 0, pendentes = 0;
+        var confirmados = 0, naoVao = 0, pendentes = 0;
         list.forEach(function(entry){
           var isSim = (entry.attending === 'Sim' || entry.attending === 'sim');
           var isNao = (entry.attending === 'Não' || entry.attending === 'nao');
-          if (isSim) { confirmados++; pessoas += parseInt(entry.guests) || 1; }
+          if (isSim) { confirmados++; }
           else if (isNao) { naoVao++; }
           else { pendentes++; }
 
@@ -614,7 +619,6 @@
           tr.innerHTML =
             '<td>' + escapeHtml(entry.name) + '</td>' +
             '<td class="' + statusClass + '">' + statusLabel + '</td>' +
-            '<td>' + (isSim ? escapeHtml(String(entry.guests)) : '-') + '</td>' +
             '<td>' + escapeHtml(entry.message || '') + '</td>' +
             '<td class="row-actions">' +
               '<button class="row-edit" data-id="' + escapeHtml(String(entry.id)) + '">Editar</button>' +
@@ -623,7 +627,6 @@
           tbody.appendChild(tr);
         });
         document.getElementById('stat-confirmados').textContent = confirmados;
-        document.getElementById('stat-pessoas').textContent = pessoas;
         document.getElementById('stat-nao').textContent = naoVao;
         document.getElementById('stat-pendentes').textContent = pendentes;
         loading.style.display = 'none';
@@ -649,7 +652,6 @@
     if (!entry) return;
     editingId = id;
     document.getElementById('edit-name').value = entry.name;
-    document.getElementById('edit-guests').value = entry.guests || 1;
     document.getElementById('edit-message').value = entry.message || '';
     editAttendValue = (entry.attending === 'Sim' || entry.attending === 'sim') ? 'sim' : 'nao';
     editOpts.forEach(function(o){ o.classList.toggle('active', o.getAttribute('data-value') === editAttendValue); });
@@ -669,7 +671,6 @@
     body.append('id', editingId);
     body.append('name', document.getElementById('edit-name').value.trim());
     body.append('attending', editAttendValue);
-    body.append('guests', document.getElementById('edit-guests').value || 1);
     body.append('message', document.getElementById('edit-message').value.trim());
 
     fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })

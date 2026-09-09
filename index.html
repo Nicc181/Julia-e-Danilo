@@ -497,9 +497,6 @@
         <div class="radio-opt" data-value="nao">Não vou poder</div>
       </div>
 
-      <label for="rsvp-guests">Quantas pessoas (incluindo você)</label>
-      <input type="number" id="rsvp-guests" min="1" value="1">
-
       <label for="rsvp-msg">Recado para os noivos (opcional)</label>
       <textarea id="rsvp-msg" placeholder="Deixe um recadinho carinhoso"></textarea>
 
@@ -717,7 +714,6 @@
 
   function resetRsvpForm(){
     document.getElementById('rsvp-name').value = '';
-    document.getElementById('rsvp-guests').value = 1;
     document.getElementById('rsvp-msg').value = '';
     attendValue = 'sim';
     opts.forEach(function(o){ o.classList.toggle('active', o.getAttribute('data-value') === 'sim'); });
@@ -753,14 +749,12 @@
     }
     nameError.style.display = 'none';
 
-    var guests = document.getElementById('rsvp-guests').value || 1;
     var msg = document.getElementById('rsvp-msg').value.trim();
 
     var body = new URLSearchParams();
     body.append('action', 'confirm');
     body.append('name', name);
     body.append('attending', attendValue);
-    body.append('guests', guests);
     body.append('message', msg);
 
     if (SHEETS_ENDPOINT && SHEETS_ENDPOINT.indexOf('http') === 0) {
