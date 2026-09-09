@@ -272,6 +272,10 @@
   .submit-btn{ width:100%; margin-top: 1.4rem; padding: 12px; font-size: 14px; justify-content:center; }
   .confirm-msg{ display:none; text-align:center; padding: 1rem; color: var(--emerald-deep); font-size: 14px; margin-top: 1rem; }
   .status{ font-size: 12px; color: var(--ink-soft); margin-top: 0.6rem; }
+  .status-strong{ font-size: 12.5px; color: var(--ink); line-height: 1.6; margin: -4px 0 1rem; }
+  .admin-stats{ display:flex; flex-wrap:wrap; gap: 10px; margin-bottom: 1.25rem; }
+  .admin-stats .stat{ flex: 1 1 100px; }
+  .guest-attend-pendente{ color: var(--gold); font-weight: 500; }
 
   /* ---------- CONTRIBUIÇÃO / PIX ---------- */
   .pix-heart{ display:block; margin: 0 auto 0.9rem; animation: ringPulse 3s ease-in-out infinite; }
@@ -329,7 +333,6 @@
   .admin-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; }
   .admin-header h2{ font-family:'Cormorant Garamond', serif; font-style: italic; font-weight: 600; color: var(--emerald-deep); margin:0; font-size: 1.6rem; }
   .admin-header h2::before{ content:'◆'; color: var(--gold); font-size: 0.5em; margin-right: 8px; vertical-align: middle; }
-  .admin-stats{ display:flex; gap: 10px; margin-bottom: 1.25rem; }
   .stat{ flex:1; background: var(--card); border:1.5px solid var(--card-line); border-top: 3px solid var(--gold); border-radius: 10px; padding: 12px; text-align:center; }
   .stat .n{ font-family:'Space Mono', monospace; font-size: 1.3rem; color: var(--emerald-deep); display:block; }
   .stat .l{ font-size: 10px; text-transform:uppercase; letter-spacing:0.1em; color: var(--ink-soft); }
@@ -415,24 +418,18 @@
   </div>
 
   <div class="section">
-    <h2>Convidados autorizados</h2>
-    <p class="status" style="margin-top:-4px;">Só quem estiver nesta lista consegue confirmar presença pelo site. Adicione os nomes como devem ser digitados no convite.</p>
+    <h2>Convidados</h2>
+    <p class="status-strong">Só quem estiver nesta lista consegue confirmar presença pelo site. Adicione os nomes como devem ser digitados no convite — a confirmação, a quantidade de pessoas e o recado aparecem aqui assim que o convidado responder (e você pode editar tudo isso a qualquer momento).</p>
     <div class="guestlist-add-row">
       <input type="text" id="new-guest-name" placeholder="Nome do convidado">
       <button class="btn gold" id="add-guest-btn" type="button">Adicionar</button>
     </div>
-    <p class="status" id="guestlist-loading">Carregando lista...</p>
-    <table id="guestlist-table" style="display:none;">
-      <thead><tr><th>Nome</th><th>Ação</th></tr></thead>
-      <tbody id="guestlist-table-body"></tbody>
-    </table>
-  </div>
 
-  <div class="section">
     <div class="admin-stats">
       <div class="stat"><span class="n" id="stat-confirmados">--</span><span class="l">confirmados</span></div>
       <div class="stat"><span class="n" id="stat-pessoas">--</span><span class="l">pessoas no total</span></div>
       <div class="stat"><span class="n" id="stat-nao">--</span><span class="l">não vão</span></div>
+      <div class="stat"><span class="n" id="stat-pendentes">--</span><span class="l">aguardando</span></div>
     </div>
 
     <p class="status" id="admin-loading">Carregando lista...</p>
@@ -529,7 +526,6 @@
     var val = document.getElementById('admin-password').value;
     if (val === ADMIN_PASSWORD) {
       goToScreen(document.getElementById('login-screen'), document.getElementById('admin-panel'));
-      loadAuthorizedGuestList();
       loadGuestList();
       loadPhotoGallery();
       startAdminPhotoGalleryAutoRefresh();
@@ -549,54 +545,13 @@
     stopAdminPhotoGalleryAutoRefresh();
   });
 
-// ============ PAINEL ADMIN: CONVIDADOS AUTORIZADOS (validação do RSVP) ============
-  function loadAuthorizedGuestList(){
-    var loading = document.getElementById('guestlist-loading');
-    var table = document.getElementById('guestlist-table');
-    var tbody = document.getElementById('guestlist-table-body');
-    loading.style.display = 'block';
-    loading.textContent = 'Carregando lista...';
-    table.style.display = 'none';
-    tbody.innerHTML = '';
-
-    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
-      loading.textContent = "Conecte a planilha do Google (SHEETS_ENDPOINT) para ver a lista aqui.";
-      return;
-    }
-
-    fetch(SHEETS_ENDPOINT + '?type=guestlist')
-      .then(function(r){ return r.json(); })
-      .then(function(list){
-        if (!list || !list.length) {
-          loading.style.display = 'block';
-          loading.textContent = 'Nenhum convidado autorizado cadastrado ainda.';
-          return;
-        }
-        loading.style.display = 'none';
-        table.style.display = 'table';
-        list.forEach(function(g){
-          var tr = document.createElement('tr');
-          tr.innerHTML =
-            '<td>' + escapeHtml(g.name) + '</td>' +
-            '<td class="row-actions"><button class="row-delete" data-id="' + escapeHtml(String(g.id)) + '">Remover</button></td>';
-          tbody.appendChild(tr);
-        });
-        tbody.querySelectorAll('.row-delete').forEach(function(btn){
-          btn.addEventListener('click', function(){ deleteAuthorizedGuest(btn.getAttribute('data-id'), btn); });
-        });
-      })
-      .catch(function(err){
-        loading.textContent = 'Não foi possível carregar a lista agora.';
-        console.error(err);
-      });
-  }
-
-  document.getElementById('add-guest-btn').addEventListener('click', addAuthorizedGuest);
+// ============ PAINEL ADMIN: ADICIONAR CONVIDADO AUTORIZADO ============
+  document.getElementById('add-guest-btn').addEventListener('click', addGuest);
   document.getElementById('new-guest-name').addEventListener('keydown', function(e){
-    if (e.key === 'Enter') addAuthorizedGuest();
+    if (e.key === 'Enter') addGuest();
   });
 
-  function addAuthorizedGuest(){
+  function addGuest(){
     var input = document.getElementById('new-guest-name');
     var name = input.value.trim();
     if (!name) return;
@@ -605,22 +560,8 @@
     body.append('id', Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
     body.append('name', name);
     fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
-      .then(function(){ input.value = ''; loadAuthorizedGuestList(); })
+      .then(function(){ input.value = ''; loadGuestList(); })
       .catch(function(err){ console.error('Não foi possível adicionar o convidado:', err); });
-  }
-
-  function deleteAuthorizedGuest(id, btnEl){
-    if (!window.confirm('Remover esse convidado da lista autorizada?')) return;
-    if (btnEl) btnEl.disabled = true;
-    var body = new URLSearchParams();
-    body.append('action', 'delete-guest');
-    body.append('id', id);
-    fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
-      .then(function(){ loadAuthorizedGuestList(); })
-      .catch(function(err){
-        console.error('Não foi possível remover o convidado:', err);
-        if (btnEl) btnEl.disabled = false;
-      });
   }
 
 // ============ PAINEL ADMIN: LISTA DE CONVIDADOS ============
@@ -658,16 +599,21 @@
         if (myToken !== loadRequestToken) return; // uma busca mais nova já está em andamento, ignora esta
         guestListCache = list;
         tbody.innerHTML = '';
-        var confirmados = 0, pessoas = 0, naoVao = 0;
+        var confirmados = 0, pessoas = 0, naoVao = 0, pendentes = 0;
         list.forEach(function(entry){
           var isSim = (entry.attending === 'Sim' || entry.attending === 'sim');
+          var isNao = (entry.attending === 'Não' || entry.attending === 'nao');
           if (isSim) { confirmados++; pessoas += parseInt(entry.guests) || 1; }
-          else { naoVao++; }
+          else if (isNao) { naoVao++; }
+          else { pendentes++; }
+
+          var statusClass = isSim ? 'guest-attend-sim' : isNao ? 'guest-attend-nao' : 'guest-attend-pendente';
+          var statusLabel = isSim ? 'Sim' : isNao ? 'Não' : 'Aguardando';
 
           var tr = document.createElement('tr');
           tr.innerHTML =
             '<td>' + escapeHtml(entry.name) + '</td>' +
-            '<td class="' + (isSim ? 'guest-attend-sim' : 'guest-attend-nao') + '">' + (isSim ? 'Sim' : 'Não') + '</td>' +
+            '<td class="' + statusClass + '">' + statusLabel + '</td>' +
             '<td>' + (isSim ? escapeHtml(String(entry.guests)) : '-') + '</td>' +
             '<td>' + escapeHtml(entry.message || '') + '</td>' +
             '<td class="row-actions">' +
@@ -679,6 +625,7 @@
         document.getElementById('stat-confirmados').textContent = confirmados;
         document.getElementById('stat-pessoas').textContent = pessoas;
         document.getElementById('stat-nao').textContent = naoVao;
+        document.getElementById('stat-pendentes').textContent = pendentes;
         loading.style.display = 'none';
         table.style.display = 'table';
 

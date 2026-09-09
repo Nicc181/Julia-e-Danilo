@@ -757,7 +757,7 @@
     var msg = document.getElementById('rsvp-msg').value.trim();
 
     var body = new URLSearchParams();
-    body.append('id', genId());
+    body.append('action', 'confirm');
     body.append('name', name);
     body.append('attending', attendValue);
     body.append('guests', guests);
