@@ -282,6 +282,7 @@
   .submit-btn{ width:100%; margin-top: 1.4rem; padding: 12px; font-size: 14px; justify-content:center; }
   .confirm-msg{ display:none; text-align:center; padding: 1rem; color: var(--emerald-deep); font-size: 14px; margin-top: 1rem; }
   .status{ font-size: 12px; color: var(--ink-soft); margin-top: 0.6rem; }
+  .form-error{ display:none; color: #B3492F; font-size: 12px; margin: 6px 0 0; }
 
   /* ---------- CONTRIBUIÇÃO / PIX ---------- */
   .pix-heart{ display:block; margin: 0 auto 0.9rem; animation: ringPulse 3s ease-in-out infinite; }
@@ -487,7 +488,8 @@
     <h2>Confirmar presença</h2>
     <form id="rsvp-form">
       <label for="rsvp-name">Nome</label>
-      <input type="text" id="rsvp-name" placeholder="Seu nome" required>
+      <input type="text" id="rsvp-name" placeholder="Seu nome (como está no convite)" required>
+      <p class="form-error" id="rsvp-name-error">Não encontramos esse nome na lista de convidados. Confira a grafia ou fale com os noivos 💌</p>
 
       <label>Você vai?</label>
       <div class="radio-row" id="rsvp-attend">
@@ -721,10 +723,36 @@
     opts.forEach(function(o){ o.classList.toggle('active', o.getAttribute('data-value') === 'sim'); });
   }
 
+  // Lista de convidados autorizados (definida pelos noivos/admin no painel)
+  var authorizedGuestList = null; // null = ainda não carregou / não configurado
+  function normalizeName(str){
+    return String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  }
+  function loadAuthorizedGuestList(){
+    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) return;
+    fetch(SHEETS_ENDPOINT + '?type=guestlist')
+      .then(function(r){ return r.json(); })
+      .then(function(list){ authorizedGuestList = (list || []).map(function(g){ return g.name; }); })
+      .catch(function(err){ console.error('Não foi possível carregar a lista de convidados:', err); });
+  }
+  loadAuthorizedGuestList();
+
   document.getElementById('rsvp-form').addEventListener('submit', function(e){
     e.preventDefault();
     var name = document.getElementById('rsvp-name').value.trim();
     if (!name) return;
+    var nameError = document.getElementById('rsvp-name-error');
+
+    // Só valida contra a lista se ela já carregou e tem pelo menos um nome cadastrado.
+    if (authorizedGuestList && authorizedGuestList.length) {
+      var isAuthorized = authorizedGuestList.some(function(g){ return normalizeName(g) === normalizeName(name); });
+      if (!isAuthorized) {
+        nameError.style.display = 'block';
+        return;
+      }
+    }
+    nameError.style.display = 'none';
+
     var guests = document.getElementById('rsvp-guests').value || 1;
     var msg = document.getElementById('rsvp-msg').value.trim();
 

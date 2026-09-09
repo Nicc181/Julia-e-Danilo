@@ -346,6 +346,9 @@
   }
   .row-actions button.row-edit{ color: var(--emerald); border-color: var(--emerald); }
   .row-actions button.row-delete{ color: #B3492F; border-color: #E0BBAE; }
+  .guestlist-add-row{ display:flex; gap: 8px; margin: 0.9rem 0 1.1rem; }
+  .guestlist-add-row input{ flex:1; }
+  .guestlist-add-row button{ white-space: nowrap; }
 
   .footer-note{
     text-align:center; font-size: 11px; color: var(--ink-soft); letter-spacing: 0.08em; text-transform: uppercase;
@@ -409,6 +412,20 @@
   <div class="admin-header">
     <h2>Lista de convidados</h2>
     <button class="btn secondary" id="admin-back">Voltar</button>
+  </div>
+
+  <div class="section">
+    <h2>Convidados autorizados</h2>
+    <p class="status" style="margin-top:-4px;">Só quem estiver nesta lista consegue confirmar presença pelo site. Adicione os nomes como devem ser digitados no convite.</p>
+    <div class="guestlist-add-row">
+      <input type="text" id="new-guest-name" placeholder="Nome do convidado">
+      <button class="btn gold" id="add-guest-btn" type="button">Adicionar</button>
+    </div>
+    <p class="status" id="guestlist-loading">Carregando lista...</p>
+    <table id="guestlist-table" style="display:none;">
+      <thead><tr><th>Nome</th><th>Ação</th></tr></thead>
+      <tbody id="guestlist-table-body"></tbody>
+    </table>
   </div>
 
   <div class="section">
@@ -512,6 +529,7 @@
     var val = document.getElementById('admin-password').value;
     if (val === ADMIN_PASSWORD) {
       goToScreen(document.getElementById('login-screen'), document.getElementById('admin-panel'));
+      loadAuthorizedGuestList();
       loadGuestList();
       loadPhotoGallery();
       startAdminPhotoGalleryAutoRefresh();
@@ -530,6 +548,80 @@
     document.getElementById('admin-error').style.display = 'none';
     stopAdminPhotoGalleryAutoRefresh();
   });
+
+// ============ PAINEL ADMIN: CONVIDADOS AUTORIZADOS (validação do RSVP) ============
+  function loadAuthorizedGuestList(){
+    var loading = document.getElementById('guestlist-loading');
+    var table = document.getElementById('guestlist-table');
+    var tbody = document.getElementById('guestlist-table-body');
+    loading.style.display = 'block';
+    loading.textContent = 'Carregando lista...';
+    table.style.display = 'none';
+    tbody.innerHTML = '';
+
+    if (!SHEETS_ENDPOINT || SHEETS_ENDPOINT.indexOf('http') !== 0) {
+      loading.textContent = "Conecte a planilha do Google (SHEETS_ENDPOINT) para ver a lista aqui.";
+      return;
+    }
+
+    fetch(SHEETS_ENDPOINT + '?type=guestlist')
+      .then(function(r){ return r.json(); })
+      .then(function(list){
+        if (!list || !list.length) {
+          loading.style.display = 'block';
+          loading.textContent = 'Nenhum convidado autorizado cadastrado ainda.';
+          return;
+        }
+        loading.style.display = 'none';
+        table.style.display = 'table';
+        list.forEach(function(g){
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + escapeHtml(g.name) + '</td>' +
+            '<td class="row-actions"><button class="row-delete" data-id="' + escapeHtml(String(g.id)) + '">Remover</button></td>';
+          tbody.appendChild(tr);
+        });
+        tbody.querySelectorAll('.row-delete').forEach(function(btn){
+          btn.addEventListener('click', function(){ deleteAuthorizedGuest(btn.getAttribute('data-id'), btn); });
+        });
+      })
+      .catch(function(err){
+        loading.textContent = 'Não foi possível carregar a lista agora.';
+        console.error(err);
+      });
+  }
+
+  document.getElementById('add-guest-btn').addEventListener('click', addAuthorizedGuest);
+  document.getElementById('new-guest-name').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') addAuthorizedGuest();
+  });
+
+  function addAuthorizedGuest(){
+    var input = document.getElementById('new-guest-name');
+    var name = input.value.trim();
+    if (!name) return;
+    var body = new URLSearchParams();
+    body.append('action', 'add-guest');
+    body.append('id', Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+    body.append('name', name);
+    fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
+      .then(function(){ input.value = ''; loadAuthorizedGuestList(); })
+      .catch(function(err){ console.error('Não foi possível adicionar o convidado:', err); });
+  }
+
+  function deleteAuthorizedGuest(id, btnEl){
+    if (!window.confirm('Remover esse convidado da lista autorizada?')) return;
+    if (btnEl) btnEl.disabled = true;
+    var body = new URLSearchParams();
+    body.append('action', 'delete-guest');
+    body.append('id', id);
+    fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
+      .then(function(){ loadAuthorizedGuestList(); })
+      .catch(function(err){
+        console.error('Não foi possível remover o convidado:', err);
+        if (btnEl) btnEl.disabled = false;
+      });
+  }
 
 // ============ PAINEL ADMIN: LISTA DE CONVIDADOS ============
   var guestListCache = [];
