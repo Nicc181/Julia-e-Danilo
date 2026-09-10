@@ -305,10 +305,10 @@
   }
   .photo-caption{ font-size: 11px; color: var(--ink-soft); margin-top: 4px; text-align:center; line-height:1.3; }
   .photo-name{ font-size: 11px; color: var(--emerald-deep); font-weight: 500; margin-bottom: 4px; text-align:center; }
-  .photo-item{ position:relative; }
+  .photo-item{ text-align:center; }
   .photo-item .photo-delete{
-    position:absolute; top:4px; right:4px; background: rgba(179,73,47,0.85); color:#fff; border:none;
-    border-radius: 6px; font-size: 10px; padding: 3px 6px; cursor:pointer;
+    display:inline-block; background: rgba(179,73,47,0.85); color:#fff; border:none;
+    border-radius: 6px; font-size: 10px; padding: 3px 8px; cursor:pointer; margin-bottom: 6px;
   }
   .photo-thumb-btn{ border:none; padding:0; margin:0; background:none; cursor:pointer; display:block; width:100%; }
   .lightbox-backdrop{
@@ -323,6 +323,19 @@
   .lightbox-close{
     position:absolute; top:18px; right:22px; color:#fff; font-size:28px; background:none; border:none; cursor:pointer;
     line-height:1;
+  }
+  .lightbox-nav{
+    position:absolute; top:50%; transform:translateY(-50%); background: rgba(255,255,255,0.12); color:#fff;
+    border:1px solid rgba(255,255,255,0.4); border-radius:50%; width:44px; height:44px; font-size:24px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; transition: background .2s ease;
+  }
+  .lightbox-nav:hover{ background: rgba(255,255,255,0.28); }
+  .lightbox-prev{ left: 14px; }
+  .lightbox-next{ right: 14px; }
+  @media (max-width:600px){
+    .lightbox-nav{ width:38px; height:38px; font-size:20px; }
+    .lightbox-prev{ left:6px; }
+    .lightbox-next{ right:6px; }
   }
   .footer-note{
     display:flex; justify-content:center; font-size: 11px; color: var(--ink-soft); letter-spacing: 0.08em; text-transform: uppercase;
@@ -575,6 +588,8 @@
 <!-- =============== PAINEL DO ADMINISTRADOR =============== -->
 <div class="lightbox-backdrop" id="photo-lightbox">
   <button class="lightbox-close" id="lightbox-close" type="button" aria-label="Fechar">&times;</button>
+  <button class="lightbox-nav lightbox-prev" id="lightbox-prev" type="button" aria-label="Foto anterior">&#8249;</button>
+  <button class="lightbox-nav lightbox-next" id="lightbox-next" type="button" aria-label="Próxima foto">&#8250;</button>
   <div>
     <img id="lightbox-img" src="" alt="">
     <p class="lightbox-caption" id="lightbox-caption"></p>
@@ -871,21 +886,58 @@
     return match ? 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w' + (size || 400) : url;
   }
 
-  function openLightbox(fullUrl, caption){
-    document.getElementById('lightbox-img').src = fullUrl;
-    document.getElementById('lightbox-caption').textContent = caption || '';
+  // ---- Lightbox com zoom e navegação entre fotos ----
+  var currentPhotos = [];
+  var currentPhotoIndex = -1;
+
+  function showCurrentPhoto(){
+    var p = currentPhotos[currentPhotoIndex];
+    if (!p) return;
+    document.getElementById('lightbox-img').src = driveThumb(p.url, 1600);
+    document.getElementById('lightbox-caption').textContent = p.caption || '';
+  }
+  function openLightbox(index){
+    currentPhotoIndex = index;
+    showCurrentPhoto();
     document.getElementById('photo-lightbox').classList.add('active');
   }
-
   function closeLightbox(){
     document.getElementById('photo-lightbox').classList.remove('active');
     document.getElementById('lightbox-img').src = '';
+  }
+  function showNextPhoto(){
+    if (!currentPhotos.length) return;
+    currentPhotoIndex = (currentPhotoIndex + 1) % currentPhotos.length;
+    showCurrentPhoto();
+  }
+  function showPrevPhoto(){
+    if (!currentPhotos.length) return;
+    currentPhotoIndex = (currentPhotoIndex - 1 + currentPhotos.length) % currentPhotos.length;
+    showCurrentPhoto();
   }
 
   document.getElementById('photo-lightbox').addEventListener('click', function(e){
     if (e.target === this) closeLightbox();
   });
   document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+  document.getElementById('lightbox-next').addEventListener('click', function(e){ e.stopPropagation(); showNextPhoto(); });
+  document.getElementById('lightbox-prev').addEventListener('click', function(e){ e.stopPropagation(); showPrevPhoto(); });
+  document.addEventListener('keydown', function(e){
+    if (!document.getElementById('photo-lightbox').classList.contains('active')) return;
+    if (e.key === 'ArrowRight') showNextPhoto();
+    else if (e.key === 'ArrowLeft') showPrevPhoto();
+    else if (e.key === 'Escape') closeLightbox();
+  });
+
+  function deletePhoto(id, itemEl){
+    if (!window.confirm('Excluir essa foto da galeria?')) return;
+    var body = new URLSearchParams();
+    body.append('action', 'delete-photo');
+    body.append('id', id);
+    fetch(SHEETS_ENDPOINT, { method: 'POST', body: body })
+      .then(function(){ loadPhotoGallery(); })
+      .catch(function(err){ console.error('Não foi possível excluir a foto:', err); });
+  }
 
   var lastPhotoIds = null;
 
@@ -910,27 +962,33 @@
         if (silent && ids === lastPhotoIds) return; // nada novo, evita piscar a tela à toa
         lastPhotoIds = ids;
 
+        var ordered = (list || []).slice().reverse();
+        currentPhotos = ordered;
+
         grid.innerHTML = '';
-        if (!list || !list.length) {
+        if (!ordered.length) {
           loading.style.display = 'block';
           loading.textContent = 'Nenhuma foto ainda — seja o primeiro a compartilhar!';
           return;
         }
         loading.style.display = 'none';
-        list.slice().reverse().forEach(function(p){
+        ordered.forEach(function(p, index){
           var item = document.createElement('div');
           item.className = 'photo-item';
           var rawCaption = p.caption || '';
           var caption = rawCaption.length > 10 ? rawCaption.slice(0, 10) + '...' : rawCaption;
           var name = p.name || '';
           var thumbUrl = driveThumb(p.url, 400);
-          var fullUrl = driveThumb(p.url, 1600);
           item.innerHTML =
             (name ? '<div class="photo-name">' + escapeHtml(name) + '</div>' : '') +
+            '<button class="photo-delete" data-id="' + escapeHtml(String(p.id)) + '" type="button">Excluir</button>' +
             '<button class="photo-thumb-btn" type="button"><img src="' + thumbUrl + '" loading="lazy" alt=""></button>' +
             (caption ? '<div class="photo-caption">' + escapeHtml(caption) + '</div>' : '');
           item.querySelector('.photo-thumb-btn').addEventListener('click', function(){
-            openLightbox(fullUrl, rawCaption);
+            openLightbox(index);
+          });
+          item.querySelector('.photo-delete').addEventListener('click', function(){
+            deletePhoto(p.id, item);
           });
           grid.appendChild(item);
         });
